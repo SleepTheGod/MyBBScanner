@@ -32,19 +32,19 @@ PySocks>=1.7.1
 # black>=23.0.0
 ```
 
-## Installation Instructions:
+## Installation Instructions
 
-### Basic installation (minimum requirements):
+### Basic installation (minimum requirements)
 ```bash
 pip install -r requirements.txt
 ```
 
-### For development/testing (includes optional dependencies):
+### For development/testing (includes optional dependencies)
 ```bash
 pip install -r requirements.txt --extra-index-url https://pypi.org/simple
 ```
 
-### For maximum compatibility (pin specific versions):
+### For maximum compatibility (pin specific versions)
 ```txt
 requests==2.31.0
 beautifulsoup4==4.12.2
@@ -55,7 +55,7 @@ certifi==2023.11.17
 PySocks==1.7.1
 ```
 
-## Alternative: requirements.txt with exact versions for production stability:
+## Alternative: requirements.txt with exact versions for production stability
 
 ```txt
 # Production-stable versions
@@ -72,7 +72,7 @@ PySocks==1.7.1
 # safety>=2.3.5
 ```
 
-## For Docker/Containerized environments:
+## For Docker/Containerized environments
 
 ```txt
 # Docker-optimized requirements
@@ -84,13 +84,13 @@ urllib3>=2.0.0,<3.0.0
 certifi>=2023.0.0,<2024.0.0
 ```
 
-## One-liner installation with all dependencies:
+## One-liner installation with all dependencies
 
 ```bash
 pip install requests beautifulsoup4 colorama tqdm urllib3 certifi PySocks
 ```
 
-## Virtual environment setup (recommended):
+## Virtual environment setup (recommended)
 
 ```bash
 # Create virtual environment
@@ -106,7 +106,7 @@ mybb-scanner-env\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## For offline/air-gapped environments:
+## For offline/air-gapped environments
 
 ```txt
 # Create a requirements.txt with download URLs
@@ -119,7 +119,7 @@ colorama==0.4.6
 pip download -r requirements.txt -d ./packages
 ```
 
-## Additional tools for development (dev-requirements.txt):
+## Additional tools for development (requirements.txt)
 
 ```txt
 # Development dependencies
@@ -135,13 +135,13 @@ bandit>=1.7.5  # Security linter
 safety>=2.3.5  # Check dependencies for known vulnerabilities
 ```
 
-## To install everything including development tools:
+## To install everything including development tools
 
 ```bash
 pip install -r requirements.txt -r dev-requirements.txt
 ```
 
-## Quick setup script (setup.sh):
+## Quick setup script (setup.sh)
 
 ```bash
 #!/bin/bash
@@ -171,7 +171,7 @@ pip install -r requirements.txt
 echo "Setup complete! Run: python mybb_scanner.py -u <target_url>"
 ```
 
-## Note: 
+## Note
 - The tool requires **Python 3.8 or higher**
 - All dependencies are open-source and freely available
 - Always use in a virtual environment to avoid conflicts
