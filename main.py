@@ -4,6 +4,24 @@ MyBB Remote Security Assessment Tool - Enhanced Edition
 For authorized penetration testing only
 """
 
+# ASCII Art Banner
+print("""
+            ███╗   ███╗██╗   ██╗██████╗ ██████╗             
+            ████╗ ████║╚██╗ ██╔╝██╔══██╗██╔══██╗           
+            ██╔████╔██║ ╚████╔╝ ██████╔╝██████╔╝           
+            ██║╚██╔╝██║  ╚██╔╝  ██╔══██╗██╔══██╗           
+            ██║ ╚═╝ ██║   ██║   ██████╔╝██████╔╝           
+            ╚═╝     ╚═╝   ╚═╝   ╚═════╝ ╚═════╝           
+                                                          
+███████╗ ██████╗ █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗ 
+██╔════╝██╔════╝██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗
+███████╗██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
+╚════██║██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
+███████║╚██████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║
+╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝
+| Version 1.0 By Taylor Christian Newsome | TsGh.org | Pl0x.org |
+""")
+
 import requests
 import sys
 import re
@@ -17,7 +35,6 @@ from urllib.parse import urljoin, urlparse, quote
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from colorama import init, Fore, Style
 import warnings
-
 # Initialize colorama
 init(autostrip=True)
 warnings.filterwarnings('ignore', category=requests.packages.urllib3.exceptions.InsecureRequestWarning)
@@ -275,12 +292,6 @@ class MyBBSecurityTester:
                 continue
             
             # Check for user enumeration indicators
-            indicators = {
-                'profile': ['profile', 'joined', 'posts', 'reputation'],
-                'memberlist': ['members', 'users', 'registered'],
-                'stats': ['statistics', 'total members', 'newest member'],
-            }
-            
             page_text = response.text.lower()
             
             # For non-existent user test
@@ -648,6 +659,107 @@ class MyBBSecurityTester:
                         "Consider hiding IP addresses from public view"
                     )
     
+    def check_version_disclosure(self):
+        """Check for MyBB version disclosure"""
+        self._log("Checking for version disclosure...", 'info')
+        
+        response = self._make_request(self.target_url)
+        if not response:
+            return
+        
+        content = response.text
+        
+        # Check meta generator
+        soup = BeautifulSoup(content, 'html.parser')
+        generator = soup.find('meta', {'name': 'generator'})
+        if generator and generator.get('content'):
+            version = generator.get('content')
+            if 'MyBB' in version:
+                self._add_finding(
+                    'Version Disclosure',
+                    'info',
+                    f"MyBB version disclosed: {version}",
+                    self.target_url,
+                    version,
+                    "Consider removing generator meta tag for security through obscurity"
+                )
+        
+        # Check for version in comments
+        version_patterns = [
+            r'MyBB ([0-9.]+)',
+            r'Powered by MyBB ([0-9.]+)',
+            r'mybb_version = "([0-9.]+)"'
+        ]
+        
+        for pattern in version_patterns:
+            match = re.search(pattern, content)
+            if match:
+                version = match.group(1)
+                self._add_finding(
+                    'Version Disclosure',
+                    'info',
+                    f"MyBB version disclosed: {version}",
+                    self.target_url,
+                    version,
+                    "Remove version information from source code"
+                )
+                break
+    
+    def check_admin_interfaces(self):
+        """Check for exposed admin interfaces"""
+        self._log("Checking for admin interfaces...", 'info')
+        
+        admin_paths = [
+            'admin/', 'admin.php', 'admin/index.php', 'admin/login.php',
+            'modcp.php', 'moderator.php', 'cp.php', 'admin/cp.php',
+            'admin/admin.php', 'admin/control.php', 'admin/panel.php'
+        ]
+        
+        def check_path(path):
+            url = urljoin(self.target_url, path)
+            response = self._make_request(url)
+            
+            if response and response.status_code == 200:
+                content = response.text.lower()
+                admin_indicators = ['login', 'username', 'password', 'admin', 'moderator', 'control panel']
+                
+                if any(indicator in content for indicator in admin_indicators):
+                    self._add_finding(
+                        'Admin Interface Exposure',
+                        'high',
+                        f"Admin/moderator interface accessible",
+                        url,
+                        None,
+                        "Restrict access to admin interfaces by IP or add additional authentication"
+                    )
+        
+        with ThreadPoolExecutor(max_workers=self.threads) as executor:
+            executor.map(check_path, admin_paths)
+    
+    def run_quick_scan(self):
+        """Run a quick scan (skip some heavy checks)"""
+        self._log("Running quick scan mode...", 'info')
+        self.check_version_disclosure()
+        self.check_admin_interfaces()
+        self.check_database_exposure()
+        self.check_installer_files()
+        self.check_backup_files()
+        self.check_debug_modes()
+    
+    def run_full_scan(self):
+        """Run a full comprehensive scan"""
+        self._log("Running full scan mode...", 'info')
+        self.check_version_disclosure()
+        self.check_admin_interfaces()
+        self.check_database_exposure()
+        self.check_user_enumeration_advanced()
+        self.check_password_hash_exposure()
+        self.check_sql_errors_advanced()
+        self.check_backup_files()
+        self.check_installer_files()
+        self.check_debug_modes()
+        self.check_user_data_leakage()
+    
     def generate_report(self, output_format='text'):
         """Generate detailed assessment report"""
         if output_format == 'json':
@@ -694,7 +806,7 @@ class MyBBSecurityTester:
             report_lines.append(f"Total: {critical_count + high_count + medium_count + info_count}")
             
             if critical_count > 0:
-                report_lines.append(f"\n{Fore.RED}{Style.BRIGHT}CRITICAL VULNERABILITIES FOUND - IMMEDIATE ACTION REQUIRED{Style.RESET_ALL}")
+                report_lines.append(f"\nCRITICAL VULNERABILITIES FOUND - IMMEDIATE ACTION REQUIRED")
             
             if self.vulnerabilities:
                 report_lines.append("\nVULNERABILITIES FOUND:")
@@ -784,16 +896,16 @@ Only use on systems you OWN or have EXPLICIT WRITTEN PERMISSION to test.
 ╔══════════════════════════════════════════════════════════════════╗
 ║                     LEGAL DISCLAIMER                             ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  This tool is for AUTHORIZED SECURITY TESTING ONLY.             ║
+║  This tool is for AUTHORIZED SECURITY TESTING ONLY.              ║
 ║                                                                  ║
-║  By using this tool, you confirm that:                          ║
-║  1. You have EXPLICIT WRITTEN PERMISSION to test this target    ║
-║  2. You are complying with all applicable laws and regulations  ║
-║  3. You will responsibly disclose any findings to the owner     ║
-║  4. You will NOT use this tool for any illegal purposes         ║
+║  By using this tool, you confirm that:                           ║
+║  1. You have EXPLICIT WRITTEN PERMISSION to test this target     ║
+║  2. You are complying with all applicable laws and regulations   ║
+║  3. You will responsibly disclose any findings to the owner      ║
+║  4. You will NOT use this tool for any illegal purposes          ║
 ║                                                                  ║
-║  Unauthorized use is ILLEGAL and UNETHICAL.                     ║
-║  The developers assume NO LIABILITY for misuse.                 ║
+║  Unauthorized use is ILLEGAL and UNETHICAL.                      ║
+║  The developers assume NO LIABILITY for misuse.                  ║
 ╚══════════════════════════════════════════════════════════════════╝
     """ + Style.RESET_ALL)
     
@@ -820,3 +932,40 @@ Only use on systems you OWN or have EXPLICIT WRITTEN PERMISSION to test.
         target_url=args.url,
         threads=args.threads,
         timeout=args.timeout,
+        verify_ssl=args.verify_ssl,
+        proxy=args.proxy,
+        depth=args.depth
+    )
+    
+    # Run scan based on mode
+    if args.quick:
+        scanner.run_quick_scan()
+    else:
+        scanner.run_full_scan()
+    
+    # Generate and save report
+    report = scanner.generate_report(args.format)
+    
+    # Print report
+    print(report)
+    
+    # Save to file if output specified
+    if args.output:
+        try:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(report)
+            print(Fore.GREEN + f"\n[+] Report saved to: {args.output}" + Style.RESET_ALL)
+        except Exception as e:
+            print(Fore.RED + f"[-] Error saving report: {e}" + Style.RESET_ALL)
+    
+    print(Fore.GREEN + f"\n[+] Scan completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + Style.RESET_ALL)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(Fore.YELLOW + "\n[!] Scan interrupted by user" + Style.RESET_ALL)
+        sys.exit(0)
+    except Exception as e:
+        print(Fore.RED + f"\n[-] Unexpected error: {e}" + Style.RESET_ALL)
+        sys.exit(1)
